@@ -43,6 +43,8 @@ with open("docker-compose-dev.yaml", "w") as docker_compose:
         docker_compose.write("      - testing_net\n")
         docker_compose.write("    depends_on:\n")
         docker_compose.write("      - server\n")
+        docker_compose.write("    volumes:\n")
+        docker_compose.write("      - ./client/config.yaml:/config.yaml\n")
         docker_compose.write("\n")
 
     for line in save[middle:]:
