@@ -1,8 +1,6 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
 	"net"
 	"time"
 	"os"
@@ -32,6 +30,34 @@ func NewClient(config ClientConfig) *Client {
 		config: config,
 	}
 	return client
+}
+
+func genericBet(num int32) Bet {
+	date := Date {
+		year: 2022,
+		month: 12,
+		day: 18,
+	}
+	bet := Bet{
+		name: "tom",
+		surname: "smith",
+		id: 123456789,
+		birth: date,
+		number: num,
+	}
+	return bet
+}
+
+func long_write(c *Client,message []byte) error {
+	bytes_writen := 0
+	for bytes_writen < len(message) {
+		n, err := c.conn.Write(message[bytes_writen:])
+		if err != nil {
+			return err
+		}
+		bytes_writen += n
+	}
+	return nil
 }
 
 // CreateClientSocket Initializes client socket. In case of
@@ -73,14 +99,10 @@ loop:
 		// Create the connection the server in every loop iteration. Send an
 		c.createClientSocket()
 
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
+		bet := genericBet(int32(msgID))
+		err := long_write(c, ConstructMessageBet(bet))
+
+		// msg, err := c.conn.read()
 		msgID++
 		c.conn.Close()
 
@@ -93,7 +115,7 @@ loop:
 		}
 		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
             c.config.ID,
-            msg,
+            1, //msg,
         )
 
 		select { // check for interrupt signal
