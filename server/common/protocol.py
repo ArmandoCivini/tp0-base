@@ -1,11 +1,19 @@
 from common.utils import Bet
 import ipaddress
+import datetime
 
 def long_read(skt, n):
     #avoids short read
     message = []
     while len(message) < n:
         message += skt.recv(n)
+    return message
+
+def long_write(skt, message):
+    #avoids short read
+    while len(message) > 0:
+        n = skt.send(message)
+        message = message[n:]
     return message
 
 def read_string(skt):
@@ -31,6 +39,14 @@ def read_bet(skt):
     month = read_int8(skt)
     date = read_int8(skt)
     number = read_int32(skt)
-    birth = f'{year}-{month}-{date}'
-    return Bet(agency, name, surname, id, birth, number)#TODO get acency
+    birth = datetime.date(year, month, date).isoformat()
+    return Bet(agency, name, surname, id, birth, number)
+
+def read_batch(skt):
+    batch_len = read_int8(skt)
+    batch = []
+    for i in range(batch_len):
+        batch.append(read_bet(skt))
+    return batch
+
     

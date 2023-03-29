@@ -42,9 +42,18 @@ func addInt16ToMessage(message []byte, number int16) []byte {
 	return message
 }
 
-func ConstructMessageBet(bet Bet) []byte {
-	message := make([]byte, 1)
+func ConstructMessageBatch(bets []Bet) []byte {
+	message := make([]byte, 2)
 	message[0] = BET_TYPE //bet type message code
+	message[1] = uint8(len(bets)) //bet type message code
+	for _, bet := range bets {
+		message = append(message, ConstructMessageBet(bet)...)
+	}
+	return message
+}
+
+func ConstructMessageBet(bet Bet) []byte {
+	message := make([]byte, 0)
 	if len(bet.name) > MAX_STRING_LEN || len(bet.surname) > MAX_STRING_LEN {
 		return nil
 	}

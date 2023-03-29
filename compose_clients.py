@@ -45,6 +45,7 @@ with open("docker-compose-dev.yaml", "w") as docker_compose:
         docker_compose.write("      - server\n")
         docker_compose.write("    volumes:\n")
         docker_compose.write("      - ./client/config.yaml:/config.yaml\n")
+        docker_compose.write(f"      - ./.data/dataset/agency-{i+1}.csv:/data/agency.csv\n")
         docker_compose.write("\n")
 
     for line in save[middle:]:

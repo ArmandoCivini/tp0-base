@@ -1,7 +1,7 @@
 import socket
 import logging
 import signal
-from common.protocol import read_bet
+from common.protocol import read_batch, long_write
 from common.utils import store_bets
 BET_TYPES = b'\x01'
 
@@ -38,12 +38,14 @@ class Server:
         try:
             msg = client_sock.recv(1)
             if msg == BET_TYPES:
-                bet = read_bet(client_sock)
-                store_bets([bet])
-                logging.info(f'action: apuesta_almacenada | result: success | dni: ${bet.document} | numero: ${bet.number}')
+                batch = read_batch(client_sock)
+                store_bets(batch)
+                for bet in batch:
+                    logging.info(f'action: apuesta_almacenada | result: success | dni: ${bet.document} | numero: ${bet.number}')
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
+            long_write(client_sock, b'\x03')
             client_sock.close()
 
     def __accept_new_connection(self):

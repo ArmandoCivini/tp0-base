@@ -6,3 +6,8 @@ loop:
   period: "5s"
 log:
   level: "info"
+batch: 
+  #525 bytes is the maximum posible single bet lenght
+  # 8kb / 525 bytes ~= 15 bets per batch
+  # maximum batch size is 127, protocol limitations
+  size: 15
