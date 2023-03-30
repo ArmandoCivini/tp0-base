@@ -47,7 +47,6 @@ class Server:
         logging.info("action: End of server | result: success")
         return
 
-
     def __accept_new_connection(self):
         """
         Accept new connections
