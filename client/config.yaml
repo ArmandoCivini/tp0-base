@@ -11,3 +11,9 @@ batch:
   # 8kb / 525 bytes ~= 15 bets per batch
   # maximum batch size is 127, protocol limitations
   size: 15
+protocol:
+  BET_TYPE: 1
+  FINISHED_TYPE: 2
+  OKEY_TYPE: 3
+  WINNER_TYPE: 5
+  FINISHED_WINNERS_TYPE: 6

@@ -5,7 +5,7 @@ import (
 )
 
 const MAX_STRING_LEN = 127
-const BET_TYPE = 0x01
+// const BET_TYPE = 0x01
 
 type Date struct {
 	year int16
@@ -46,9 +46,9 @@ func bytesToInt32(bytes []byte) int32 {
 	return int32(binary.BigEndian.Uint32(bytes))
 }
 
-func ConstructMessageBatch(bets []Bet) []byte {
+func ConstructMessageBatch(bets []Bet, BET_TYPE int8) []byte {
 	message := make([]byte, 2)
-	message[0] = BET_TYPE //bet type message code
+	message[0] = byte(BET_TYPE) //bet type message code
 	message[1] = uint8(len(bets)) //bet type message code
 	for _, bet := range bets {
 		message = append(message, ConstructMessageBet(bet)...)

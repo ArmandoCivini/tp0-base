@@ -11,9 +11,16 @@ import (
 
 const OKEY_TYPE = 0x03
 const FINISHED_TYPE = 0x02
-const ASK_TYPE = 0x04
 const WINNER_TYPE = 0x05
 const FINISHED_WINNERS_TYPE = 0x06
+
+type ProtocolConfig struct {
+	BET_TYPE int8
+	FINISHED_TYPE int8
+	OKEY_TYPE int8
+	WINNER_TYPE int8
+	FINISHED_WINNERS_TYPE int8
+}
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
 	ID            string
@@ -21,6 +28,7 @@ type ClientConfig struct {
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
 	BatchSize     int
+	Protocol 	  ProtocolConfig
 }
 
 // Client Entity that encapsulates how
@@ -114,7 +122,7 @@ func (c *Client) StartClientLoop() {
 		}
 
 		// send bets to the server
-		err := long_write(c, ConstructMessageBatch(bets))
+		err := long_write(c, ConstructMessageBatch(bets, c.config.Protocol.BET_TYPE))
 		if err != nil {
 			//TODO: log write error
 		}

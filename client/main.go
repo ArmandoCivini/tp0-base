@@ -37,6 +37,11 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "lapse")
 	v.BindEnv("log", "level")
 	v.BindEnv("batch", "size")
+	v.BindEnv("protocol", "BET_TYPE")
+	v.BindEnv("protocol", "FINISHED_TYPE")
+	v.BindEnv("protocol", "OKEY_TYPE")
+	v.BindEnv("protocol", "WINNER_TYPE")
+	v.BindEnv("protocol", "FINISHED_WINNERS_TYPE")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -103,12 +108,21 @@ func main() {
 	// Print program config with debugging purposes
 	PrintConfig(v)
 
+	protocolConfig := common.ProtocolConfig{
+		BET_TYPE:              int8(v.GetInt("protocol.BET_TYPE")),
+		FINISHED_TYPE:         int8(v.GetInt("protocol.FINISHED_TYPE")),
+		OKEY_TYPE:             int8(v.GetInt("protocol.OKEY_TYPE")),
+		WINNER_TYPE:           int8(v.GetInt("protocol.WINNER_TYPE")),
+		FINISHED_WINNERS_TYPE: int8(v.GetInt("protocol.FINISHED_WINNERS_TYPE")),
+	}
+
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
 		LoopLapse:     v.GetDuration("loop.lapse"),
 		LoopPeriod:    v.GetDuration("loop.period"),
 		BatchSize:     v.GetInt("batch.size"),
+		Protocol:      protocolConfig,
 	}
 
 	client := common.NewClient(clientConfig)
