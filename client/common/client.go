@@ -11,7 +11,6 @@ import (
 
 const OKEY_TYPE = 0x03
 const FINISHED_TYPE = 0x02
-const ASK_TYPE = 0x04
 const WINNER_TYPE = 0x05
 const FINISHED_WINNERS_TYPE = 0x06
 // ClientConfig Configuration used by the client
