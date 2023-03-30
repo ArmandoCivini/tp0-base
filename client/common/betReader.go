@@ -13,6 +13,7 @@ const BET_FILE_PATH = "./data/agency.csv"
 
 type BetReader struct {
 	file *os.File
+	reader *csv.Reader
 }
 
 func NewBetReader() *BetReader {
@@ -20,7 +21,8 @@ func NewBetReader() *BetReader {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return &BetReader{file: file}
+	csvReader := csv.NewReader(file)
+	return &BetReader{file: file, reader: csvReader}
 }
 
 func DestroyBetReader(betreader *BetReader) {
@@ -55,8 +57,8 @@ func stringToInt8(str string) int8 {
 func readNBets(betreader *BetReader, n int) []Bet {
 	bets := make([]Bet, 0)
 
-    // read csv values using csv.Reader
-    csvReader := csv.NewReader(betreader.file)
+    
+    csvReader := betreader.reader
     for len(bets) < n {
         rec, err := csvReader.Read()
         if err == io.EOF {
@@ -65,7 +67,7 @@ func readNBets(betreader *BetReader, n int) []Bet {
         if err != nil {
             return nil
         }
-        // do something with read line
+        
 		if len(rec) != 5 {
 			log.Infof("action: invalid_bet | result: fail | value: %v",
 				rec,

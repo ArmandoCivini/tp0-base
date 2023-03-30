@@ -2,6 +2,9 @@ from common.utils import Bet
 import ipaddress
 import datetime
 
+def get_ip(skt):
+    return int(ipaddress.ip_address(skt.getpeername()[0]))
+
 def long_read(skt, n):
     #avoids short read
     message = []
@@ -31,7 +34,7 @@ def read_int8(skt):
     return int.from_bytes(long_read(skt, 1), byteorder='big', signed=True)
 
 def read_bet(skt):
-    agency = int(ipaddress.ip_address(skt.getpeername()[0]))
+    agency = get_ip(skt)
     name = read_string(skt)
     surname = read_string(skt)
     id  = read_int32(skt)

@@ -42,6 +42,10 @@ func addInt16ToMessage(message []byte, number int16) []byte {
 	return message
 }
 
+func bytesToInt32(bytes []byte) int32 {
+	return int32(binary.BigEndian.Uint32(bytes))
+}
+
 func ConstructMessageBatch(bets []Bet) []byte {
 	message := make([]byte, 2)
 	message[0] = BET_TYPE //bet type message code
