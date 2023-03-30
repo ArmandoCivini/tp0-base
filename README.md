@@ -6,3 +6,5 @@ En este ejercicio es importante considerar los mecanismos de sincronización a u
 
 En caso de que el alumno implemente el servidor Python utilizando _multithreading_,  deberán tenerse en cuenta las [limitaciones propias del lenguaje](https://wiki.python.org/moin/GlobalInterpreterLock).
 
+##
+

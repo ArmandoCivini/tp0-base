@@ -15,29 +15,34 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.listen_backlog = listen_backlog
         self.running = True
+        self.processes = []
+        self.shutdowns = []
         signal.signal(signal.SIGTERM, self.graceful_shutdown)
 
     def run(self):
         manager = mp.Manager()
         bet_q = manager.Queue()
-        p = mp.Process(target=bet_loader, args=(bet_q,self.listen_backlog,))
-        p.start()
+        shutdown = manager.Event()
+        self.p = mp.Process(target=bet_loader, args=(bet_q,self.listen_backlog,shutdown,))
+        self.shutdowns.append(shutdown)
+        self.p.start()
         contacted_agencies = 0
-        processes = []
         agency_queues = {}
         while self.running and contacted_agencies < self.listen_backlog:
             client_sock = self.__accept_new_connection()
             if client_sock:  
+                shutdown = manager.Event()
                 winner_q = manager.Queue()
                 agency_queues[get_ip(client_sock)] = winner_q
-                new_p = mp.Process(target=client_process, args=(client_sock,bet_q,winner_q,))
-                processes.append(new_p)
+                new_p = mp.Process(target=client_process, args=(client_sock,bet_q,winner_q,shutdown,))
+                self.processes.append(new_p)
+                self.shutdowns.append(shutdown)
                 new_p.start()
                 contacted_agencies += 1
         
-        p.join()
+        self.p.join()
         proccess_winners(agency_queues)
-        for new_p in processes:
+        for new_p in self.processes:
             new_p.join()
         logging.info("action: End of server | result: success")
         return
@@ -70,6 +75,11 @@ class Server:
         logging.info(f'action: closing_sockets | result: in_progress')
         self._server_socket.close()
         logging.info(f'action: closing_sockets | result: success')
+        for shutdown in self.shutdowns:
+            shutdown.set()
+        self.p.join()
+        for p in self.processes:
+            p.join()
 
     def __del__(self):
         self._server_socket.close()

@@ -3,9 +3,9 @@ from common.protocol import (send_finished_winner_message,
                              send_won_message, read_protocol, 
                              write_confirm)
 
-def client_process(client_sock, bet_q, winner_q):
+def client_process(client_sock, bet_q, winner_q, shutdown):
     finished_betting = False
-    while not finished_betting:
+    while not finished_betting and not shutdown.is_set():
         try:
             batch_or_end = read_protocol(client_sock)
             bet_q.put(batch_or_end)
@@ -18,7 +18,7 @@ def client_process(client_sock, bet_q, winner_q):
             if not finished_betting:
                 write_confirm(client_sock)
     
-    while True:
+    while not shutdown.is_set():
         winner = winner_q.get()
         if winner.end:
             break
