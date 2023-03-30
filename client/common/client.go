@@ -9,11 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const OKEY_TYPE = 0x03
-const FINISHED_TYPE = 0x02
-const WINNER_TYPE = 0x05
-const FINISHED_WINNERS_TYPE = 0x06
-
 type ProtocolConfig struct {
 	BET_TYPE int8
 	FINISHED_TYPE int8
@@ -132,7 +127,7 @@ func (c *Client) StartClientLoop() {
 		if err != nil {
 			//TODO: log read error
 		}
-		if msg[0] != OKEY_TYPE {
+		if msg[0] != byte(c.config.Protocol.OKEY_TYPE) {
 			//TODO: log server error
 		}
 		msgID++
@@ -158,7 +153,7 @@ func (c *Client) StartClientLoop() {
 	}
 
 	finishedMessage := make([]byte, 1)
-	finishedMessage[0] = FINISHED_TYPE
+	finishedMessage[0] = byte(c.config.Protocol.FINISHED_TYPE)
 	err := long_write(c, finishedMessage)
 	if err != nil {
 		//TODO: log write finished error
@@ -182,7 +177,7 @@ func readWinners(c *Client) []int32 {
 		//TODO: log read error
 		return nil
 	}
-	for msg[0] == WINNER_TYPE {
+	for msg[0] == byte(c.config.Protocol.WINNER_TYPE) {
 		winnerIdBytes, err := long_read(c, 4)
 		if err != nil {
 			//TODO: log read error
@@ -198,7 +193,7 @@ func readWinners(c *Client) []int32 {
 		}
 	}
 
-	if msg[0] == FINISHED_WINNERS_TYPE {
+	if msg[0] == byte(c.config.Protocol.FINISHED_WINNERS_TYPE) {
 		return winners
 	}
 	return nil
