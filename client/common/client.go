@@ -88,61 +88,55 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func readBets(betReader *BetReader, batchSize int) ([]Bet, bool) {
+	bets := readNBets(betReader, batchSize)
+	if bets == nil {
+		log.Errorf("action: error reading bets | result: fail")
+	}
+	if len(bets) < batchSize {
+		log.Infof("action: end of file | result: fail | bets read: %v",
+		len(bets),
+		)
+		return bets, true
+	}
+	return bets, false
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	// autoincremental msgID to identify every message sent
-	msgID := 1 //TODO remove
 	sigtermChannel := make(chan os.Signal, 1)
 	signal.Notify(sigtermChannel, os.Interrupt, syscall.SIGTERM)
 	betReader := NewBetReader()
 	sentAll := false
-	
+	bets := make([]Bet, 0)
 	c.createClientSocket()
 
 	for !sentAll {
 
-		// Create the connection the server in every loop iteration. Send an
-
-		// read bets from the file
-		bets := readNBets(betReader, c.config.BatchSize) //TODO: check for nil and EOF
+		bets, sentAll = readBets(betReader, c.config.BatchSize)
 		if bets == nil {
-			//TODO: log read error
 			continue
-		}
-		if len(bets) < c.config.BatchSize {
-			log.Errorf("action: end of file | result: fail | bets read: %v",
-			len(bets),
-			)
-			sentAll = true
 		}
 
 		// send bets to the server
 		err := long_write(c, ConstructMessageBatch(bets, c.config.Protocol.BET_TYPE))
 		if err != nil {
-			//TODO: log write error
+			log.Errorf("action: error sending bets | result: fail")
+			continue
 		}
 
 		// receive confirmation from the server
 		msg, err := long_read(c, 1)
 		if err != nil {
-			//TODO: log read error
-		}
-		if msg[0] != byte(c.config.Protocol.OKEY_TYPE) {
-			//TODO: log server error
-		}
-		msgID++
-		
-		if err != nil {
-			log.Errorf("action: batch_unsuccessfull | result: fail | client_id: %v | error: %v",
+			log.Errorf("action: error reading confirmation | result: fail")
+		} else if msg[0] != byte(c.config.Protocol.OKEY_TYPE) {
+			log.Errorf("action: error didnt confirm | result: fail")
+		} else {	
+			log.Infof("action: batch_successfull | result: success | client_id: %v",
 			c.config.ID,
-			err,
 			)
-			return
 		}
-		log.Infof("action: batch_successfull | result: success | client_id: %v",
-            c.config.ID,
-        )
-		
+
 		select { // check for interrupt signal
 		case <-sigtermChannel:
 			log.Infof("action: signal_received | result: success | client_id: %v", c.config.ID)
@@ -156,12 +150,13 @@ func (c *Client) StartClientLoop() {
 	finishedMessage[0] = byte(c.config.Protocol.FINISHED_TYPE)
 	err := long_write(c, finishedMessage)
 	if err != nil {
-		//TODO: log write finished error
+		log.Errorf("action: error writing finish message | result: fail")
 	}
 
 	winners := readWinners(c)
 	if winners == nil {
-		//TODO: log winners error
+		log.Errorf("action: failed to get winners | result: fail")
+		return
 	}
 
 	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
@@ -174,13 +169,12 @@ func readWinners(c *Client) []int32 {
 	winners := make([]int32, 0)
 	msg, err := long_read(c, 1)
 	if err != nil {
-		//TODO: log read error
 		return nil
 	}
 	for msg[0] == byte(c.config.Protocol.WINNER_TYPE) {
 		winnerIdBytes, err := long_read(c, 4)
 		if err != nil {
-			//TODO: log read error
+			return nil
 		} else {
 			winnerId := bytesToInt32(winnerIdBytes)
 			log.Infof("action: received winner | result: success | DNI: %v", winnerId)
@@ -188,7 +182,6 @@ func readWinners(c *Client) []int32 {
 		}
 		msg, err = long_read(c, 1)
 		if err != nil {
-			//TODO: log read error
 			return nil
 		}
 	}
