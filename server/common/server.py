@@ -10,39 +10,36 @@ FINISHED_TYPE = b'\x02'
 CONFIRM_TYPE = b'\x03'
 WINNER_TYPE = b'\x05'
 FINISHED_WINNERS_TYPE = b'\x06'
-NUMBER_OF_AGENCIES = 2
 
 class BatchOrEnd:
-    def __init__(self, batch, end=False, socket=None):
+    def __init__(self, batch, end=False):
         self.batch = batch
         self.end = end
-        self.socket = socket
 
-def bet_loader(bet_q):
+def bet_loader(bet_q, number_of_agencies):
     finished_agencies = 0
-    waiting_clients = {}
 
-    while finished_agencies < NUMBER_OF_AGENCIES:
+    while finished_agencies < number_of_agencies:
         batch = bet_q.get()
         if batch.end:
-            waiting_clients[get_ip(batch.socket)] = batch.socket
             finished_agencies += 1
             continue
         store_bets(batch.batch)
-
-    bets = load_bets()
-    for bet in bets:
-        if has_won(bet):
-            logging.info(f'action: WINNER | result: success | dni: ${bet.document} | numero: ${bet.number}')
-            send_won_message(bet, waiting_clients[bet.agency])
-    
-    send_finished_winners_message(waiting_clients)
+    return
 
 def send_won_message(bet, skt):
     message = bytearray()
     message += WINNER_TYPE
     message += int(bet.document).to_bytes(4, byteorder='big', signed=True)
     long_write(skt, message)
+
+def send_finished_winner_message(skt):
+    long_write(skt, FINISHED_WINNERS_TYPE)
+    skt.close()
+
+def send_winners_to_processes(agency_queues, bet):
+    logging.info("sending winner")
+    agency_queues[bet.agency].put(BatchOrEnd([bet]))
 
 
 def send_finished_winners_message(waiting_clients):
@@ -51,7 +48,7 @@ def send_finished_winners_message(waiting_clients):
         long_write(skt, FINISHED_WINNERS_TYPE)
         skt.close()
 
-def handle_client_connection(client_sock, bet_q):
+def handle_client_connection(client_sock, bet_q, winner_q):
     """
     Read message from a specific client socket and closes the socket
 
@@ -65,18 +62,27 @@ def handle_client_connection(client_sock, bet_q):
             if msg == BET_TYPE:
                 batch = read_batch(client_sock)
                 bet_q.put(BatchOrEnd(batch))
-                # store_bets(batch)
-                logging.info(f'action: batch_almacenad0 | result: success')
+                # logging.info(f'action: batch_almacenad0 | result: success')
             elif msg == FINISHED_TYPE:
                 finished_betting = True
                 logging.info(f'action: ended_bets | result: success | id: {get_ip(client_sock)}')
-                bet_q.put(BatchOrEnd(None, end=True, socket=client_sock))
-                return
+                bet_q.put(BatchOrEnd(None, end=True))
+                break
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
             if not finished_betting:
                 long_write(client_sock, CONFIRM_TYPE)
+    
+    while True:
+        logging.info("waiting for winner")
+        winner = winner_q.get()
+        if winner.end:
+            break
+        send_won_message(winner.batch[0], client_sock)
+
+    send_finished_winner_message(client_sock)
+    return
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -84,6 +90,7 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+        self.listen_backlog = listen_backlog
         self.running = True
         signal.signal(signal.SIGTERM, self.graceful_shutdown)
 
@@ -99,23 +106,32 @@ class Server:
         """
 
         # the server
-        bet_q = mp.Manager().Queue()
-        p = mp.Process(target=bet_loader, args=(bet_q,))
+        manager = mp.Manager()
+        bet_q = manager.Queue()
+        p = mp.Process(target=bet_loader, args=(bet_q,self.listen_backlog,))
         p.start()
         contacted_agencies = 0
         processes = []
-        while self.running and contacted_agencies < NUMBER_OF_AGENCIES:
+        agency_queues = {}
+        while self.running and contacted_agencies < self.listen_backlog:
             client_sock = self.__accept_new_connection()
             if client_sock:  
-                new_p = mp.Process(target=handle_client_connection, args=(client_sock,bet_q,))
+                winner_q = manager.Queue()
+                agency_queues[get_ip(client_sock)] = winner_q
+                new_p = mp.Process(target=handle_client_connection, args=(client_sock,bet_q,winner_q,))
                 processes.append(new_p)
                 new_p.start()
                 contacted_agencies += 1
         
+        p.join()
+        logging.info("action: sending_winners | result: processing")
+        [send_winners_to_processes(agency_queues, bet) for bet in load_bets() if has_won(bet)]
+        logging.info("action: sending_winners | result: success")
+        for agency in agency_queues:
+            agency_queues[agency].put(BatchOrEnd(None, end=True))
         for new_p in processes:
             new_p.join()
-        p.join()
-        # logging.info(f'FIN')
+        logging.info("action: End of server | result: success")
         return
 
 
