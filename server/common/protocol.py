@@ -1,6 +1,18 @@
 from common.utils import Bet
 import ipaddress
 import datetime
+import logging
+
+BET_TYPE = b'\x01'
+FINISHED_TYPE = b'\x02'
+CONFIRM_TYPE = b'\x03'
+WINNER_TYPE = b'\x05'
+FINISHED_WINNERS_TYPE = b'\x06'
+
+class BatchOrEnd:
+    def __init__(self, batch, end=False):
+        self.batch = batch
+        self.end = end
 
 def get_ip(skt):
     return int(ipaddress.ip_address(skt.getpeername()[0]))
@@ -52,4 +64,26 @@ def read_batch(skt):
         batch.append(read_bet(skt))
     return batch
 
+def send_won_message(bet, skt):
+    message = bytearray()
+    message += WINNER_TYPE
+    message += int(bet.document).to_bytes(4, byteorder='big', signed=True)
+    long_write(skt, message)
+
+def send_finished_winner_message(skt):
+    long_write(skt, FINISHED_WINNERS_TYPE)
+    skt.close()
+
+def read_protocol(skt):
+    msg = skt.recv(1)
+    if msg == BET_TYPE:
+        batch = read_batch(skt)
+        logging.info(f'action: batch_almacenad0 | result: success')
+        return BatchOrEnd(batch)
+    elif msg == FINISHED_TYPE:
+        logging.info(f'action: ended_bets | result: success | id: {get_ip(skt)}')
+        return BatchOrEnd(None, end=True)
+    
+def write_confirm(skt):
+    long_write(skt, CONFIRM_TYPE)
     
