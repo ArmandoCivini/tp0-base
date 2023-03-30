@@ -4,6 +4,8 @@ from common.protocol import (send_finished_winner_message,
                              write_confirm)
 
 def client_process(client_sock, bet_q, winner_q, shutdown):
+    #loops, receiving batches from client until it finishes
+    #then, it receives winners from winner_q and sends them to the client
     finished_betting = False
     while not finished_betting and not shutdown.is_set():
         try:

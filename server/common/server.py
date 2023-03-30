@@ -13,21 +13,24 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
-        self.listen_backlog = listen_backlog
+        self.listen_backlog = listen_backlog #number of agencies to listen to
         self.running = True
         self.processes = []
-        self.shutdowns = []
+        self.shutdowns = [] #event to shutdown processes
         signal.signal(signal.SIGTERM, self.graceful_shutdown)
 
     def run(self):
         manager = mp.Manager()
-        bet_q = manager.Queue()
+        bet_q = manager.Queue() #queue for writing batches
         shutdown = manager.Event()
-        self.p = mp.Process(target=bet_loader, args=(bet_q,self.listen_backlog,shutdown,))
         self.shutdowns.append(shutdown)
+
+        self.p = mp.Process(target=bet_loader, args=(bet_q,self.listen_backlog,shutdown,))
         self.p.start()
+
         contacted_agencies = 0
-        agency_queues = {}
+        agency_queues = {} #queue depending on agency id
+
         while self.running and contacted_agencies < self.listen_backlog:
             client_sock = self.__accept_new_connection()
             if client_sock:  
@@ -40,7 +43,7 @@ class Server:
                 new_p.start()
                 contacted_agencies += 1
         
-        self.p.join()
+        self.p.join() #wait for all bets to be loaded
         proccess_winners(agency_queues)
         for new_p in self.processes:
             new_p.join()
@@ -81,4 +84,6 @@ class Server:
             p.join()
 
     def __del__(self):
+        for shutdown in self.shutdowns:
+            shutdown.set()
         self._server_socket.close()

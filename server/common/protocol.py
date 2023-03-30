@@ -25,7 +25,7 @@ def long_read(skt, n):
     return message
 
 def long_write(skt, message):
-    #avoids short read
+    #avoids short write
     while len(message) > 0:
         n = skt.send(message)
         message = message[n:]
@@ -46,6 +46,7 @@ def read_int8(skt):
     return int.from_bytes(long_read(skt, 1), byteorder='big', signed=True)
 
 def read_bet(skt):
+    #reads one bet from the socket
     agency = get_ip(skt)
     name = read_string(skt)
     surname = read_string(skt)
@@ -58,6 +59,7 @@ def read_bet(skt):
     return Bet(agency, name, surname, id, birth, number)
 
 def read_batch(skt):
+    #reads a batch of bets from the socket
     batch_len = read_int8(skt)
     batch = []
     for i in range(batch_len):
@@ -65,12 +67,14 @@ def read_batch(skt):
     return batch
 
 def send_won_message(bet, skt):
+    #informs client of winner bet
     message = bytearray()
     message += WINNER_TYPE
     message += int(bet.document).to_bytes(4, byteorder='big', signed=True)
     long_write(skt, message)
 
 def send_finished_winner_message(skt):
+    #informs client that all winners have been sent
     long_write(skt, FINISHED_WINNERS_TYPE)
     skt.close()
 
@@ -85,5 +89,6 @@ def read_protocol(skt):
         return BatchOrEnd(None, end=True)
     
 def write_confirm(skt):
+    #sends a confirmation message to the client that the batch has been received
     long_write(skt, CONFIRM_TYPE)
     
