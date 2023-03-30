@@ -84,6 +84,9 @@ class Server:
             p.join()
 
     def __del__(self):
-        for shutdown in self.shutdowns:
-            shutdown.set()
-        self._server_socket.close()
+        try:
+            for shutdown in self.shutdowns:
+                shutdown.set()
+            self._server_socket.close()
+        except:
+            pass

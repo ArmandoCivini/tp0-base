@@ -4,7 +4,7 @@ from configparser import ConfigParser
 from common.server import Server
 import logging
 import os
-
+from common.config import declare_config
 
 def initialize_config():
     """ Parse env variables or config file to find program config params
@@ -26,6 +26,11 @@ def initialize_config():
         config_params["port"] = int(os.getenv('SERVER_PORT', config["DEFAULT"]["SERVER_PORT"]))
         config_params["listen_backlog"] = int(os.getenv('SERVER_LISTEN_BACKLOG', config["DEFAULT"]["SERVER_LISTEN_BACKLOG"]))
         config_params["logging_level"] = os.getenv('LOGGING_LEVEL', config["DEFAULT"]["LOGGING_LEVEL"])
+        config_params["bet_type"] = int(os.getenv('BET_TYPE', config["DEFAULT"]["BET_TYPE"]))
+        config_params["finished_type"] = int(os.getenv('FINISHED_TYPE', config["DEFAULT"]["FINISHED_TYPE"]))
+        config_params["confirm_type"] = int(os.getenv('CONFIRM_TYPE', config["DEFAULT"]["CONFIRM_TYPE"]))
+        config_params["winner_type"] = int(os.getenv('WINNER_TYPE', config["DEFAULT"]["WINNER_TYPE"]))
+        config_params["finished_winners_type"] = int(os.getenv('FINISHED_WINNERS_TYPE', config["DEFAULT"]["FINISHED_WINNERS_TYPE"]))
     except KeyError as e:
         raise KeyError("Key was not found. Error: {} .Aborting server".format(e))
     except ValueError as e:
@@ -39,6 +44,7 @@ def main():
     logging_level = config_params["logging_level"]
     port = config_params["port"]
     listen_backlog = config_params["listen_backlog"]
+    declare_config(config_params)
 
     initialize_log(logging_level)
 
