@@ -1,4 +1,5 @@
 import logging
+import socket
 from common.protocol import (send_finished_winner_message, 
                              send_won_message, read_protocol, 
                              write_confirm)
@@ -24,7 +25,13 @@ def client_process(client_sock, bet_q, winner_q, shutdown):
         winner = winner_q.get()
         if winner.end:
             break
-        send_won_message(winner.batch[0], client_sock)
+        try:
+            send_won_message(winner.batch[0], client_sock)
+        except OSError as e:
+            logging.error("action: send_message | result: fail | error: {e}")
 
-    send_finished_winner_message(client_sock)
+    try:
+        send_finished_winner_message(client_sock)
+    except OSError as e:
+        logging.error("action: send_message | result: fail | error: {e}")
     return
