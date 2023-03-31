@@ -126,10 +126,58 @@ En este ejercicio es importante considerar los mecanismos de sincronización a u
 
 En caso de que el alumno implemente el servidor Python utilizando _multithreading_,  deberán tenerse en cuenta las [limitaciones propias del lenguaje](https://wiki.python.org/moin/GlobalInterpreterLock).
 
-## Consideraciones Generales
-Se espera que los alumnos realicen un _fork_ del presente repositorio para el desarrollo de los ejercicios.
-El _fork_ deberá contar con una sección de README que indique como ejecutar cada ejercicio.
-La Parte 2 requiere una sección donde se explique el protocolo de comunicación implementado.
-La Parte 3 requiere una sección que expliquen los mecanismos de sincronización utilizados.
+# Documentación
 
-Finalmente, se pide a los alumnos leer atentamente y **tener en cuenta** los criterios de corrección provistos [en el campus](https://campusgrado.fi.uba.ar/mod/page/view.php?id=73393).
+## Protocolo
+
+### Batches
+
+Lo primero que hace el cliente al conectarse al servidor es empezar a mandar batches. Para esto tiene una forma especifica de mandar los mensajes.
+<Br/>
+<Br/>
+El primer byte que envia indica el tipo de mensaje, de ser un mensaje de batches de apuestas, este byte estará seteado en 1. El siguiente byte marcará el tamaño de un batch, lo cual le dirá al servidor cuantas apuestas leer del socket. Despues de esto se adjuntan todas las apuestas del batch. Las apuestas usan un sistema mixto, los números se manejan con bloques fijos mientras que las string llevan un byte adelante para demarcar su largo. Los campos que se envian en una apuesta y sus tipos son los siguientes:
+<Br/>
+Nombre[string]
+Apellido[string]
+Documento[int32]
+Año de nacimiento[int16]
+Mes de nacimiento[int8]
+Día de nacimiento[int8]
+Número[int32]
+<Br/>
+<Br/>
+Por cada uno de estos batches enviados se va a esperar la confirmación del servidor que responderá con un byte. Al finalizar el envío de todos los bytes, el cliente le manda un byte el 2 para avisarle al servidor que termino con los batches.
+
+### Ganadores
+
+Al finalizar de enviar los batches el cliente se queda aguardando los ganadores. Por cada apuesta ganadora de ese cliente el servidor le enviará un mensaje con el primer byte en 5 y 4 bytes más representanto el documento del ganador.
+<Br/>
+<Br/>
+Además el servidor envía un mensaje adicional para avisar que se terminaron de enviar los ganadores.
+
+### Aclaraciones
+Este protocolo es el usado para el ejercicio 7, en el ejercicio 6 se usa el mismo protocolo pero sin la parte de ganadores y para el ejercicio 5 tampoco esta el byte que define el largo del batch en el protocolo ya que solo envía una apuesta a la vez.
+<Br/>
+<Br/>
+También en el ejercicio 8 los valores que definen el tipo de un mensaje pasan a estar en los archivos de configuración
+
+## Concurrencia
+Para lograr concurrencia en el servidor se usaron los multiprocesos de python. El programa genera un proceso por cada conexión a un cliente. Cada uno de estos procesos se comunica con su cliente, procesa los batches recibidos y los coloca en la cola `bet_q`. Además hay un proceso adicional, `bet_loader` que se encarga solamente de sacar batches de esta cola para guardarlos con `store_bets`. 
+<br />
+<br />
+Si un proceso de cliente termina de procesar batches, éste lo avisa por la cola `bet_q`. Gracias a esto, cuando el `bet_loader` detecta que todos los procesos an terminado enviando batches. Este finaliza.
+<br />
+<br />
+Al finalizar `bet_loader`, el proceso principal despertará y comenzara a procesar ganadores. Al encontrar un ganador, el proceso principal lo enviará atravez de la cola `winner_q` al proceso del cliente correspondiente. Los procesos de clientes desde haber terminado de procesar apuestas estuvieron esperando sobre esta cola los ganadores para enviarselos al cliente.
+<br />
+<br />
+Una vez terminado los ganadores, el proceso principal avisa a los procesos clientes mediante la `winner_q` de cada uno y ellos envian el mensaje de finalización al cliente y terminan. Al finalizar todos los procesos clientes, el proceso principal también finalizará.
+
+## Tamaño de los batches
+El espacio máximo que ocupa una apuesta se puede calcular tomando el tamaño máximo de un string (255 bytes) por 2 más todos los otros bytes filos del protocolo que resulta en 525 bytes el tamaño máximo de una apuesta. si queremos que los mensajes siempre se mantengan por debajo de 8Kb podriamos poner 15 apuestas por batch. Por lo que se usó esa cantidad como valor.
+
+## Bugs
+El ejercicio 6 tiene un bug que esta correjido en el ejercicio 7. Tiene que ver con no guardar el `reader *csv.Reader` dentro del struct `BetReader` que puede hacer que el archivo se vuelva a abrir por el medio de una linea.
+
+## Misceláneos
+El ejercicio 8 es el más completo de todos, cosas como logs faltantes del cliente(en otros ejercicios estan demarcados con //TODO), la prolijidad del código y la separación de responsabilidades en el servidor, estan resueltas en este ejercicio.
