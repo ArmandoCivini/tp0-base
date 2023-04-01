@@ -179,5 +179,14 @@ El espacio máximo que ocupa una apuesta se puede calcular tomando el tamaño m�
 ## Bugs
 El ejercicio 6 tiene un bug que esta correjido en el ejercicio 7. Tiene que ver con no guardar el `reader *csv.Reader` dentro del struct `BetReader` que puede hacer que el archivo se vuelva a abrir por el medio de una linea.
 
+## Long-reads y Long-writes
+Sobre esto no pude encontrar información que indique send() o recv() devuelvan algo distinto a la cantidad de bytes mandados o el mensaje recivido. fuente:https://docs.python.org/3/library/socket.html
+
+## Gaceful shutdowns
+En en cliente hay un channel, `sigtermChannel`, que captura la señal y al terminar el loop actual del cliente se termina la ejecución.
+<br />
+<br />
+En el servidor se usa una función `graceful_shutdown` la que cierra los recursos correspondientes y termina la ejecución.
+
 ## Misceláneos
 El ejercicio 8 es el más completo de todos, cosas como logs faltantes del cliente(en otros ejercicios estan demarcados con //TODO), la prolijidad del código y la separación de responsabilidades en el servidor, estan resueltas en este ejercicio.
